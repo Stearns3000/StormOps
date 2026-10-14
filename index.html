@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101820">
+<meta name="description" content="STORM OPS weather and filming-condition dashboard for Big Piney, Wyoming.">
+<link rel="manifest" href="./manifest.webmanifest">
+<title>STORM OPS</title>
+<style>
+:root{color-scheme:dark;--bg:#0a1016;--panel:#121d27;--panel2:#172531;--line:#263846;--text:#eef5fa;--muted:#9bb0be;--green:#8df0bb;--amber:#ffc66d;--red:#ff7b7b;--blue:#75c8ff}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#172938 0,#0a1016 48%);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:0 0 30px}
+header{padding:24px 18px 16px;border-bottom:1px solid var(--line);background:#0b1219d9;position:sticky;top:0;z-index:3;backdrop-filter:blur(14px)}
+.brand{display:flex;align-items:center;gap:11px}.mark{width:42px;height:42px;border:1px solid #4d6b7c;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#223b4a,#0e1820);font-size:23px}
+h1{font-size:21px;letter-spacing:2px;margin:0;font-weight:900} .sub{color:var(--muted);font-size:12px;letter-spacing:1.4px}
+main{max-width:900px;margin:auto;padding:16px;display:grid;gap:14px}.topline{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}.pill{border:1px solid var(--line);background:#15222c;border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:1.4px;color:var(--green);margin:0 0 10px}
+.card{background:linear-gradient(145deg,#14212b,#101922);border:1px solid var(--line);border-radius:17px;padding:16px;box-shadow:0 10px 30px #0002}
+.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:12px}.temp{font-size:48px;line-height:1.1;font-weight:800;letter-spacing:-2px}.condition{font-size:16px;margin-top:7px}.muted{color:var(--muted)}.small{font-size:12px}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.metric{background:#0d1720;border:1px solid #213440;border-radius:12px;padding:10px}.metric b{display:block;font-size:18px;margin-top:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.btns{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid #385364;border-radius:10px;padding:10px 12px;color:var(--text);background:#1b303d;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;font:inherit;cursor:pointer}.btn.primary{background:#a5f4c5;color:#07140e;border-color:#a5f4c5;font-weight:800}
+.alert{padding:12px;border-radius:12px;border:1px solid var(--line);background:#0c161f;margin-top:8px}.alert.warn{border-color:#72532a;background:#2a2115}.alert.danger{border-color:#713d42;background:#29171b}.alert strong{display:block;margin-bottom:3px}.status{font-weight:800;color:var(--green)}.status.caution{color:var(--amber)}.status.danger{color:var(--red)}
+ul{padding-left:18px;margin:8px 0}.foot{color:#8195a3;font-size:11px;padding:0 3px}.mapframe{width:100%;height:350px;border:0;border-radius:12px;background:#0a1118}.loading{color:var(--muted)}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+@media(max-width:560px){.hero,.grid2{grid-template-columns:1fr}.temp{font-size:44px}.metrics{grid-template-columns:repeat(2,1fr)}header{position:static}.mapframe{height:300px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><div class="mark">⛈</div><div><h1>STORM OPS</h1><div class="sub">FIELD WEATHER INTELLIGENCE</div></div></div></header>
+<main>
+<div class="topline"><div><b>BIG PINEY, WYOMING</b><div class="muted small">42.538° N · 110.114° W · Filming conditions</div></div><span class="pill" id="updated">Connecting to NOAA…</span></div>
+<section class="card hero">
+ <div><h2>Current Conditions</h2><div class="temp" id="temp">—°</div><div class="condition" id="condition">Loading observations…</div><div class="muted small" id="station">Finding a nearby reporting station</div></div>
+ <div class="metrics">
+  <div class="metric"><span class="muted small">WIND</span><b id="wind">—</b></div>
+  <div class="metric"><span class="muted small">GUST</span><b id="gust">—</b></div>
+  <div class="metric"><span class="muted small">HUMIDITY</span><b id="humidity">—</b></div>
+  <div class="metric"><span class="muted small">VISIBILITY</span><b id="visibility">—</b></div>
+ </div>
+</section>
+<section class="card"><div class="row"><h2>Filming Readiness</h2><span id="score" class="status">ASSESSING</span></div><div id="assessment" class="muted">Checking forecast, wind, and official alerts…</div><div id="risklist"></div><div class="foot" style="margin-top:10px">This is a filming-condition aid, not a road-condition sensor. Confirm road reports before driving; do not enter dangerous weather for footage.</div></section>
+<section class="card"><h2>Active National Weather Service Alerts</h2><div id="alerts" class="loading">Loading active Wyoming alerts…</div><div class="btns" style="margin-top:12px"><a class="btn" href="https://www.weather.gov/riw/" target="_blank" rel="noopener">Riverton NWS Office ↗</a><a class="btn" href="https://www.weather.gov/alerts" target="_blank" rel="noopener">Official Alerts ↗</a></div></section>
+<section class="card"><h2>Hourly Forecast</h2><div id="forecast" class="loading">Loading hourly forecast…</div></section>
+<section class="card"><h2>Live Radar</h2><p class="muted small">Radar is provided by the National Weather Service. Use the full radar viewer for animated reflectivity and available radar layers.</p><div class="btns"><a class="btn primary" href="https://radar.weather.gov/" target="_blank" rel="noopener">Open NWS Live Radar ↗</a><a class="btn" href="https://mrms.ncep.noaa.gov/" target="_blank" rel="noopener">MRMS Data ↗</a></div><div class="foot" style="margin-top:10px">Radar display is hosted by NWS. This first version does not calculate rotation, wind shear, hail size, or road-surface state from radar imagery.</div></section>
+<section class="card"><h2>Wind & Terrain Notes</h2><div id="terrain" class="muted">Terrain can channel or accelerate winds locally. This dashboard reports forecast/observed wind only; it does not model mountain-wave effects or vertical wind shear.</div></section>
+<section class="card"><h2>Monitoring & Notifications</h2><p class="muted small">While open, STORM OPS refreshes conditions and can show browser notifications for newly detected alerts. Background refresh depends on browser/device support and is not guaranteed to run continuously.</p><div class="btns"><button id="notify" class="btn primary">Enable Notifications</button><button id="refresh" class="btn">Refresh Now</button></div><div id="notifyState" class="small muted" style="margin-top:8px">Notifications not enabled.</div><div id="log" class="small muted" style="margin-top:10px">Event log: app started.</div></section>
+<div class="foot">Data: U.S. National Weather Service / NOAA public API. Forecast and observation availability may vary. API terms and status: <a style="color:var(--blue)" href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noopener">weather.gov API documentation</a>.</div>
+</main>
+<script>
+const LAT=42.538, LON=-110.114;
+const API='https://api.weather.gov';
+const $=id=>document.getElementById(id);
+const seenAlerts=new Set();
+let latestObs=null, latestHourly=null;
+const fmt=(v,u='')=>v==null?'—':`${Math.round(v)}${u}`;
+const cToF=v=>v==null?null:(v*9/5+32);
+const msToMph=v=>v==null?null:v*2.23694;
+const degDir=d=>{if(d==null)return'—';return ['N','NE','E','SE','S','SW','W','NW'][Math.round(d/45)%8]};
+function log(s){$('log').textContent=`Event log: ${new Date().toLocaleTimeString()} — ${s}`}
+async function get(url){const r=await fetch(url,{headers:{Accept:'application/geo+json'}});if(!r.ok)throw new Error(`NOAA response ${r.status}`);return r.json()}
+async function loadAlerts(){
+ try{
+  const j=await get(`${API}/alerts/active?point=${LAT},${LON}`);
+  const fs=j.features||[];
+  $('alerts').innerHTML='';
+  if(!fs.length){$('alerts').innerHTML='<div class="alert">No active NWS alerts are currently returned for this point.</div>';return}
+  fs.sort((a,b)=>new Date(a.properties?.effective||0)-new Date(b.properties?.effective||0));
+  for(const f of fs){
+   const p=f.properties||{}, ev=p.event||'Weather alert';
+   const level=/warning|emergency/i.test(ev)?'danger':/watch|advisory/i.test(ev)?'warn':'';
+   const el=document.createElement('div');el.className='alert '+level;
+   const title=document.createElement('strong');title.textContent=ev;
+   const desc=document.createElement('div');desc.className='small';desc.textContent=(p.headline||p.description||'Official alert details available on NWS.').slice(0,450);
+   const ends=document.createElement('div');ends.className='muted small';ends.textContent='Ends: '+(p.ends?new Date(p.ends).toLocaleString():'time not listed');
+   el.append(title,desc,ends);$('alerts').appendChild(el);
+   const id=f.id||ev+p.effective;
+   if(!seenAlerts.has(id)){if(seenAlerts.size>0 && Notification.permission==='granted' && 'Notification'in window)new Notification('STORM OPS: '+ev,{body:(p.headline||'New NWS alert near Big Piney').slice(0,160)});seenAlerts.add(id)}
+  }
+ }catch(e){$('alerts').textContent='Could not load live alerts. Check connection or use the official NWS Alerts link.'}
+}
+function assess(){
+ const p=latestObs, h=latestHourly?.properties?.periods||[];
+ const next=h.slice(0,6);
+ let risks=[],points=0;
+ const t=p?.temperature?.value, wind=msToMph(p?.windSpeed?.value), gust=msToMph(p?.windGust?.value);
+ const desc=(next.map(x=>x.shortForecast||'').join(' ')).toLowerCase();
+ if(/snow|blizzard|sleet|freezing rain|ice|wintry/.test(desc)){risks.push('Winter precipitation appears in the next 6 hours; check road reports and temperatures.');points+=2}
+ if(t!=null && cToF(t)<=32){risks.push('Observed air temperature is at or below freezing; untreated surfaces may be icy.');points+=1}
+ if(wind>=25||gust>=35){risks.push('Strong wind may affect vehicle stability, camera work, and loose equipment.');points+=2}
+ if(/thunderstorm|heavy rain|hail/.test(desc)){risks.push('Thunderstorm, heavy rain, or hail wording appears in the near-term forecast.');points+=2}
+ $('risklist').innerHTML='';
+ if(!risks.length)risks=['No listed trigger detected from the available observation and next six forecast periods. This is not a guarantee of safe conditions.'];
+ risks.forEach((r,i)=>{let d=document.createElement('div');d.className='alert '+(points>=3?'warn':'');d.textContent='• '+r;$('risklist').appendChild(d)});
+ if(points>=3){$('score').textContent='CAUTION';$('score').className='status danger';$('assessment').textContent='One or more filming-risk indicators detected. Verify official alerts and road conditions.'}
+ else if(points>0){$('score').textContent='WATCH CONDITIONS';$('score').className='status caution';$('assessment').textContent='Some caution indicators detected; conditions may vary locally.'}
+ else{$('score').textContent='NO TRIGGER DETECTED';$('score').className='status';$('assessment').textContent='No configured trigger detected from current available data. This is not a safety clearance.'}
+}
+async function loadWeather(){
+ try{
+  const point=await get(`${API}/points/${LAT},${LON}`);
+  const props=point.properties||{};
+  const forecastUrl=props.forecastHourly;
+  const stationUrl=props.observationStations;
+  const [hourly,stations]=await Promise.all([get(forecastUrl),get(stationUrl)]);
+  latestHourly=hourly;
+  const station=(stations.features||[])[0];
+  if(station){
+   const sid=station.properties?.stationIdentifier;
+   const obs=await get(`${API}/stations/${sid}/observations/latest`);
+   latestObs=obs.properties||{};
+   const o=latestObs;
+   $('temp').textContent=fmt(cToF(o.temperature?.value),'°F');
+   $('condition').textContent=o.textDescription||'Observation available';
+   $('station').textContent=`${sid||'Nearby station'} · observed ${o.timestamp?new Date(o.timestamp).toLocaleTimeString(): 'time unavailable'}`;
+   $('wind').textContent=`${fmt(msToMph(o.windSpeed?.value))} mph ${degDir(o.windDirection?.value)}`;
+   $('gust').textContent=`${fmt(msToMph(o.windGust?.value))} mph`;
+   $('humidity').textContent=fmt(o.relativeHumidity?.value,'%');
+   $('visibility').textContent=o.visibility?.value==null?'—':`${(o.visibility.value/1609.34).toFixed(1)} mi`;
+  }
+  $('forecast').innerHTML='';
+  (hourly.properties?.periods||[]).slice(0,8).forEach(p=>{
+   const d=document.createElement('div');d.className='alert';
+   const row=document.createElement('div');row.className='row';
+   const left=document.createElement('div');left.innerHTML=`<strong>${new Date(p.startTime).toLocaleTimeString([], {hour:'numeric'})}</strong><div class="muted small">${p.shortForecast||''}</div>`;
+   const right=document.createElement('div');right.style.textAlign='right';right.innerHTML=`<strong>${p.temperature}°${p.temperatureUnit}</strong><div class="muted small">${p.windSpeed||'—'} ${p.windDirection||''}</div>`;
+   row.append(left,right);d.appendChild(row);$('forecast').appendChild(d)
+  });
+  assess();$('updated').textContent='Updated '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});log('weather and forecast refreshed');
+ }catch(e){$('condition').textContent='Live data unavailable';$('station').textContent='Check network and retry.';$('updated').textContent='Connection issue';log('weather fetch failed')}
+}
+async function refreshAll(){await Promise.all([loadWeather(),loadAlerts()])}
+$('notify').addEventListener('click',async()=>{
+ if(!('Notification'in window)){$('notifyState').textContent='This browser does not support notifications.';return}
+ const p=await Notification.requestPermission();
+ $('notifyState').textContent=p==='granted'?'Notifications allowed. New alerts can notify while this page is active. Background delivery is not guaranteed.':'Notification permission not granted.';
+ log('notification permission: '+p)
+});
+$('refresh').addEventListener('click',refreshAll);
+refreshAll();
+setInterval(refreshAll,5*60*1000);
+if('serviceWorker'in navigator && location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').then(async reg=>{
+ try{if(reg.periodicSync){await reg.periodicSync.register('storm-ops-check',{minInterval:60*60*1000});$('notifyState').textContent='Best-effort background refresh registration requested; browser controls timing.'}}catch(e){}
+}).catch(()=>{});
+</script>
+</body></html>
